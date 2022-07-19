@@ -161,5 +161,6 @@ case "$1" in
     ;;
 esac
 
+# to avoid any unexpected side effects, main procedure ends in case~esac.
 echo "Error: Unexpected error occurred at vault-token-helper-pass-sh."
 exit 1
