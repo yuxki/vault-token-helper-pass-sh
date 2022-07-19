@@ -36,8 +36,8 @@
 version="1.0"
 usage="Usage: vault-token-helper-pass-sh <pass operation>
 
-  pass operatons:
-      These operatios are command helper that runs \"pass <command> <path>\".
+  pass operations:
+      These operations are command helper that runs \"pass <command> <path>\".
       <path> is SHA1 hash that computed by VAULT_ADDR environment variable.
 
       get:            Decrypt and show the vault token with \"pass show <path>\" command.
@@ -75,7 +75,7 @@ esac
 
 # Checks for pass operation -----------------------------------------------------------------------
 if [ -z "$VAULT_ADDR" ]; then
-  echo "Error: No VAULT_ADDR environment variable set."
+  echo "Error: No VAULT_ADDR environment variable set." 1>&2
   exit 1
 fi
 
@@ -97,17 +97,32 @@ pass_dir="vault-token-helper-pass-sh"
 path="$pass_dir/$sha1hash"
 case "$1" in
   get)
-    pass show $path | tr -d '\n'
+    result=`pass show $path 2>&1`
+    error=`echo "$result" | grep Error`
+    if [ -n "$error"  ]; then
+      echo "$result" 1>&2
+      exit 1
+    fi
+    echo -n $result
     exit 0
     ;;
   store)
     read token
-    echo -n "$token" | pass insert -e $path
+    result=`echo -n "$token" | pass insert -e $path 2>&1`
+    if [ -n "$result"  ]; then
+      echo "$result" 1>&2
+      exit 1
+    fi
     exit 0
     ;;
   erase)
+    result=`pass rm -f $path 2>&1`
+    error=`echo "$result" | grep Error`
+    if [ -n "$error"  ]; then
+      echo "$result" 1>&2
+      exit 1
+    fi
     sed "/$sha1hash/d" -i $map_file_path
-    pass rm -f $path
     exit 0
     ;;
   ls)
@@ -139,5 +154,5 @@ case "$1" in
     ;;
 esac
 
-echo "Error: Unexpected error occured."
+echo "Error: Unexpected error occurred at vault-token-helper-pass-sh."
 exit 1
