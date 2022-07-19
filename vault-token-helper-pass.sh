@@ -97,6 +97,13 @@ pass_dir="vault-token-helper-pass-sh"
 path="$pass_dir/$sha1hash"
 case "$1" in
   get)
+    # exit 0, even if the path is not found,
+    # because "vault login" command also tries to get token.
+    is_exists=`pass ls $pass_dir | grep $sha1hash`
+    if [ -z "$is_exists" ]; then
+      exit 0
+    fi
+
     result=`pass show $path 2>&1`
     error=`echo "$result" | grep Error`
     if [ -n "$error"  ]; then
