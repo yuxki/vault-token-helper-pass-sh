@@ -1,0 +1,25 @@
+version: 2.1
+jobs:
+  Unit-Test:
+    docker:
+      - image: ubuntu:focal
+    steps:
+      - run:
+          name: Unit Tests Preparation
+          command: |
+            apt update && apt -y install pass
+            gpg --batch --passphrase '' --quick-gen-key test-user default default
+            pass init test-user
+            mkdir -p $HOME/.local/bin
+      - checkout
+      - run:
+          name: Run Unit Tests
+          environment:
+            PATH: /root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          command: |
+            ./install.sh
+            ./tests/unit-tests.sh
+workflows:
+  unit_test:
+    jobs:
+      - Unit-Test
