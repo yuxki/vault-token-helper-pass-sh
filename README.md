@@ -29,7 +29,7 @@ echo 'token_helper = "/usr/local/bin/vault-token-helper-pass-sh"' > $HOME/.vault
 
 ## Usage: vault-token-helper-pass-sh \<pass operation\>
 ### pass operations
-These operations are command helper that runs "pass \<command\> \<path\>".
+These operations are command helper that runs `pass <command> <path>`.
 \<path\> is SHA1 hash that computed by VAULT_ADDR environment variable.
 
 #### vault-token-helper-pass-sh store
