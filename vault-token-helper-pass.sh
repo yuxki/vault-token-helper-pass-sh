@@ -71,6 +71,13 @@ case "$1" in
     echo "$usage"
     exit 0
     ;;
+  get|store|erase|ls)
+    break
+    ;;
+  *)
+    echo "$usage"
+    exit 1
+    ;;
 esac
 
 # Checks for pass operation -----------------------------------------------------------------------
@@ -85,21 +92,16 @@ if [ ! -e $map_file_path ]; then
   chmod -077 $map_file_path
 fi
 
-# Map Addr to SHA1 --------------------------------------------------------------------------------
-sha1hash=`echo $VAULT_ADDR | sha1sum - | sed "s/ *-$//"`
-is_exists=`grep "$sha1hash$" $map_file_path`
-if [ -z "$is_exists" ]; then
-  echo "$VAULT_ADDR,$sha1hash" >> $map_file_path
-fi
-
 # Main --------------------------------------------------------------------------------------------
 pass_dir="vault-token-helper-pass-sh"
+sha1hash=`echo $VAULT_ADDR | sha1sum - | sed "s/ *-$//"`
 path="$pass_dir/$sha1hash"
+
 case "$1" in
   get)
     # exit 0, even if the path is not found,
     # because "vault login" command also tries to get token.
-    is_exists=`pass ls $pass_dir | grep $sha1hash`
+    is_exists=`pass ls $pass_dir 2>&1 | grep $sha1hash`
     if [ -z "$is_exists" ]; then
       exit 0
     fi
@@ -114,9 +116,16 @@ case "$1" in
     exit 0
     ;;
   store)
+    # map addr to sha1
+    is_exists=`grep "$sha1hash$" $map_file_path`
+    if [ -z "$is_exists" ]; then
+      echo "$VAULT_ADDR,$sha1hash" >> $map_file_path
+    fi
+
+    # store token
     read token
-    result=`echo -n "$token" | pass insert -e $path 2>&1`
-    if [ -n "$result"  ]; then
+    result=`echo -n "$token" | pass insert -e $path 2>&1 | grep -v "^mkdir"`
+    if [ -n "$result" ]; then
       echo "$result" 1>&2
       exit 1
     fi
@@ -133,30 +142,42 @@ case "$1" in
     exit 0
     ;;
   ls)
-    if [ $1 = "ls" ] ; then
-      pass ls $pass_dir |
-      cat $map_file_path - |
-      awk '
-        /^vault-token-helper-pass-sh/ {
-          print $0
-          lsFlag = 1
-          next
-        }
-        # make mapping database until starting "pass ls" lines
-        !lsFlag {
-          records[i++] = $0
-        }
-        # search sha1 from mapping database and print formatted line
-        lsFlag {
-          for ( idx in records) {
-            split(records[idx], record, ",")
-            if ($0 ~ record[2]) {
-              split($0, line, " ")
-              print line[1] " " record[1] " (sha1:" line[2] ")"
-            }
-          }
-        }'
+    result=`pass ls $pass_dir 2>&1`
+    error=`echo "$result" | grep Error`
+    isEmpty=`echo "$error" | grep 'not in the password store.$'`
+
+    if [ -n "$isEmpty" ]; then
+      echo "There is no vault token that this script manages."
+      exit 0
     fi
+
+    if [ -n "$error" ]; then
+      echo "$result" 1>&2
+      exit 1
+    fi
+
+    echo "$result" |
+    cat $map_file_path - |
+    awk '
+      /^vault-token-helper-pass-sh/ {
+        print $0
+        lsFlag = 1
+        next
+      }
+      # make mapping database until starting "pass ls" lines
+      !lsFlag {
+        records[i++] = $0
+      }
+      # search sha1 from mapping database and print formatted line
+      lsFlag {
+        for ( idx in records) {
+          split(records[idx], record, ",")
+          if ($0 ~ record[2]) {
+            split($0, line, " ")
+            print line[1] " " record[1] " (sha1:" line[2] ")"
+          }
+        }
+      }'
     exit 0
     ;;
 esac
