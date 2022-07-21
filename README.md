@@ -32,13 +32,42 @@ echo 'token_helper = "/usr/local/bin/vault-token-helper-pass-sh"' > $HOME/.vault
 These operations are command helper that runs `pass <command> <path>`.
 \<path\> is SHA1 hash that computed by VAULT_ADDR environment variable.
 
-#### vault-token-helper-pass-sh store
-Encrypt and store the vault token with `pass insert <path>` command.
-#### vault-token-helper-pass-sh get
+#### store
+Encrypt and store the vault token with `pass insert <path>` command.\
+And add the VAULT_ADDR to SHA1 map is added to "~/.vault-token-helper-pass-sh-map".
+```
+$ export VAULT_ADDR=http://127.0.0.1:8200
+$ echo foo | vault-token-helper-pass-sh store
+$ pass ls
+Password Store
+`-- vault-token-helper-pass-sh
+    `-- 490650718a8022ff97742a7e0745c0ec326c07a8
+```
+```
+$ cat ~/.vault-token-helper-pass-sh-map 
+http://127.0.0.1:8200,490650718a8022ff97742a7e0745c0ec326c07a8
+```
+#### get
 Decrypt and show the vault token with `pass show <path>` command.
-#### vault-token-helper-pass-sh erase
-Remove vault token and with `pass insert <path>` command. And also, the VAULT_ADDR to SHA1 map is deleted.
-#### vault-token-helper-pass-sh ls
+```
+$ export VAULT_ADDR=http://127.0.0.1:8200
+$ vault-token-helper-pass-sh get
+foo
+```
+
+#### erase
+Remove vault token and with `pass insert <path>` command.\
+And the VAULT_ADDR to SHA1 map is deleted from "~/.vault-token-helper-pass-sh-map".
+```
+$ export VAULT_ADDR=http://127.0.0.1:8200
+$ vault-token-helper-pass-sh erase
+$ pass ls
+Password Store
+```
+```
+$ cat ~/.vault-token-helper-pass-sh-map 
+```
+#### ls
 Show all VAULT_ADDR to SHA1 maps.
 ```
 $ vault-token-helper-pass-sh ls
